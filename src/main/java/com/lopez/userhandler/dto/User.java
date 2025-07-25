@@ -1,20 +1,36 @@
 package com.lopez.userhandler.dto;
 
+import java.util.Objects;
+
+import com.lopez.userhandler.service.AbstractService;
+
+import io.quarkus.runtime.annotations.RegisterForReflection;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondarySortKey;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSortKey;
+
+@RegisterForReflection
+@DynamoDbBean
 public class User {
+  private String id; // UUID partition key
+  private String idNumber;
+  private String userName;
+  private String dateOfBirth;
+  private String gender;
+  private String occupation;
+  private String email;
+  // Risk level is a secondary sort key for the UserNameIndex
+  private String riskLevel;
+
   public User() {
+    // No need for initialization here
   }
 
-  public User(String id, String idNumber, String userName, String dateOfBirth, String gender, String occupation,
-      String riskLevel) {
-    this.id = id;
-    this.idNumber = idNumber;
-    this.userName = userName;
-    this.dateOfBirth = dateOfBirth;
-    this.gender = gender;
-    this.occupation = occupation;
-    this.riskLevel = riskLevel;
-  }
-
+  @DynamoDbPartitionKey
+  @DynamoDbAttribute(AbstractService.USER_ID)
   public String getId() {
     return id;
   }
@@ -23,6 +39,8 @@ public class User {
     this.id = id;
   }
 
+  @DynamoDbSecondaryPartitionKey(indexNames = "IdNumberIndex")
+  @DynamoDbAttribute(AbstractService.USER_ID_NUMBER)
   public String getIdNumber() {
     return idNumber;
   }
@@ -31,6 +49,7 @@ public class User {
     this.idNumber = idNumber;
   }
 
+  @DynamoDbSecondaryPartitionKey(indexNames = "UserNameIndex")
   public String getUserName() {
     return userName;
   }
@@ -55,6 +74,15 @@ public class User {
     this.gender = gender;
   }
 
+  @DynamoDbSecondaryPartitionKey(indexNames = "EmailIndex")
+  public String getEmail() {
+    return email;
+  }
+
+  public void setEmail(String email) {
+    this.email = email;
+  }
+
   public String getOccupation() {
     return occupation;
   }
@@ -63,6 +91,7 @@ public class User {
     this.occupation = occupation;
   }
 
+  @DynamoDbSecondaryPartitionKey(indexNames = "IdNumberRiskLevelIndex")
   public String getRiskLevel() {
     return riskLevel;
   }
@@ -71,11 +100,20 @@ public class User {
     this.riskLevel = riskLevel;
   }
 
-  private String id;
-  private String idNumber;
-  private String userName;
-  private String dateOfBirth;
-  private String gender;
-  private String occupation;
-  private String riskLevel;
+  @Override
+  public boolean equals(Object o) {
+    if (!(o instanceof User)) {
+      return false;
+    }
+
+    User other = (User) o;
+
+    return Objects.equals(other.idNumber, this.idNumber);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(this.idNumber);
+  }
+
 }

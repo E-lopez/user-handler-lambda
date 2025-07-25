@@ -1,5 +1,5 @@
 .DS_Store
-target
+target/
 *.iml
 .idea
 !.idea/runConfigurations
@@ -40,3 +40,27 @@ nb-configuration.xml
 .mvn/.gradle-enterprise/
 .quarkus
 /target/
+
+# Build files and directories
+build/
+dist/
+out/
+*.jar
+*.war
+*.ear
+*.class
+*.zip
+*.tar.gz
+*.tgz
+function.zip
+bootstrap-example.sh
+build-metrics.json
+quarkus-artifact.properties
+sam.jvm.yaml
+sam.native.yaml
+samconfig.toml
+*-runner
+*-runner.jar
+*-dev.jar
+*-native-image-source-jar/
+target/**
