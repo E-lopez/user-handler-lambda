@@ -20,7 +20,7 @@ public class AbstractService {
   public static final String USER_OCCUPATION = "occupation";
   public static final String USER_RISK_LEVEL = "riskLevel";
   public static final String USER_EMAIL = "email";
-  public static final String USER_TABLE_NAME = "Users";
+  public static final String USER_TABLE_NAME = System.getenv().getOrDefault("USER_TABLE_NAME", "Users");
   public static final String ID_NUMBER_INDEX = "IdNumberIndex";
   public static final String EMAIL_INDEX = "EmailIndex";
   public static final String USER_NAME_INDEX = "UserNameIndex";

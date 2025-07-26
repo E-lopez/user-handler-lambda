@@ -39,7 +39,7 @@ public class User {
     this.id = id;
   }
 
-  @DynamoDbSecondaryPartitionKey(indexNames = "IdNumberIndex")
+  @DynamoDbSecondaryPartitionKey(indexNames = AbstractService.ID_NUMBER_INDEX)
   @DynamoDbAttribute(AbstractService.USER_ID_NUMBER)
   public String getIdNumber() {
     return idNumber;
@@ -49,7 +49,7 @@ public class User {
     this.idNumber = idNumber;
   }
 
-  @DynamoDbSecondaryPartitionKey(indexNames = "UserNameIndex")
+  @DynamoDbSecondaryPartitionKey(indexNames = AbstractService.USER_NAME_INDEX)
   public String getUserName() {
     return userName;
   }
@@ -74,7 +74,7 @@ public class User {
     this.gender = gender;
   }
 
-  @DynamoDbSecondaryPartitionKey(indexNames = "EmailIndex")
+  @DynamoDbSecondaryPartitionKey(indexNames = AbstractService.EMAIL_INDEX)
   public String getEmail() {
     return email;
   }
@@ -91,7 +91,6 @@ public class User {
     this.occupation = occupation;
   }
 
-  @DynamoDbSecondaryPartitionKey(indexNames = "IdNumberRiskLevelIndex")
   public String getRiskLevel() {
     return riskLevel;
   }
