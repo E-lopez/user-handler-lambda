@@ -1,0 +1,137 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: User Handler Lambda with DynamoDB
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+  S3Bucket:
+    Type: String
+    Description: S3 bucket containing the Lambda deployment package
+  S3Key:
+    Type: String
+    Default: function.zip
+    Description: S3 key for the Lambda deployment package
+
+Resources:
+  # DynamoDB Table
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub Users-${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: idNumber
+          AttributeType: S
+        - AttributeName: email
+          AttributeType: S
+        - AttributeName: userName
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: IdNumberIndex
+          KeySchema:
+            - AttributeName: idNumber
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: EmailIndex
+          KeySchema:
+            - AttributeName: email
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: UserNameIndex
+          KeySchema:
+            - AttributeName: userName
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+  # Lambda Execution Role
+  UserHandlerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: DynamoDBAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:DescribeTable
+                Resource:
+                  - !GetAtt UsersTable.Arn
+                  - !Sub "${UsersTable.Arn}/index/*"
+
+  # Lambda Function
+  UserHandlerFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: UsersTable
+    Properties:
+      FunctionName: !Sub user-handler-${Environment}
+      Runtime: provided.al2023
+      Architectures:
+        - arm64
+      CodeUri: 
+        Bucket: !Ref S3Bucket
+        Key: !Ref S3Key
+      Handler: io.quarkus.amazon.lambda.http.LambdaHttpHandler
+      MemorySize: 256
+      Timeout: 30
+      Role: !GetAtt UserHandlerRole.Arn
+      Environment:
+        Variables:
+          DISABLE_SIGNAL_HANDLERS: true
+          JAVA_TOOL_OPTIONS: -Djava.util.logging.manager=org.jboss.logmanager.LogManager
+          QUARKUS_DYNAMODB_AWS_REGION: !Ref AWS::Region
+          USER_TABLE_NAME: !Sub "Users-${Environment}"
+          QUARKUS_DYNAMODB_AWS_CREDENTIALS_TYPE: default
+      Events:
+        HttpApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+
+
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub 'https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/'
+    Export:
+      Name: !Sub UserHandlerApi-${Environment}
+  
+  UserHandlerFunctionArn:
+    Description: User Handler Lambda Function ARN
+    Value: !GetAtt UserHandlerFunction.Arn
+    Export:
+      Name: !Sub UserHandlerFunction-${Environment}
+  
+  DynamoDBTableName:
+    Description: DynamoDB table name
+    Value: !Ref UsersTable
+    Export:
+      Name: !Sub UsersTable-${Environment}
