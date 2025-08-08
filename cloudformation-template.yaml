@@ -114,6 +114,11 @@ Resources:
           Properties:
             Path: /{proxy+}
             Method: ANY
+        RootEvent:
+          Type: HttpApi
+          Properties:
+            Path: /
+            Method: ANY
 
 
 

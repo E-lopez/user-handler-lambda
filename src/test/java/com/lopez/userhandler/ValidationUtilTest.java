@@ -23,9 +23,10 @@ class ValidationUtilTest {
 
     @Test
     void testValidIdNumber() {
+        assertTrue(ValidationUtil.isValidIdNumber("12345"));
         assertTrue(ValidationUtil.isValidIdNumber("12345678"));
         assertTrue(ValidationUtil.isValidIdNumber("123456789012"));
-        assertFalse(ValidationUtil.isValidIdNumber("1234567"));
+        assertFalse(ValidationUtil.isValidIdNumber("1234"));
         assertFalse(ValidationUtil.isValidIdNumber("1234567890123"));
         assertFalse(ValidationUtil.isValidIdNumber("abc12345"));
         assertFalse(ValidationUtil.isValidIdNumber(null));

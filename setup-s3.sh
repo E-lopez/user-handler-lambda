@@ -1,26 +1,38 @@
 #!/bin/bash
 
-set -e
+# Setup script for S3 deployment bucket
+DEPLOYMENT_BUCKET=${1:-user-handler-deployment-bucket}
 
-# Configuration
-BUCKET_NAME="user-handler-lambda-$(date +%Y%m%d-%H%M%S)"
-AWS_REGION="us-east-1"
+echo "Setting up deployment bucket: $DEPLOYMENT_BUCKET"
 
-echo "Creating S3 bucket for Lambda deployment..."
+# Create bucket with proper permissions
+aws s3 mb s3://$DEPLOYMENT_BUCKET
 
-# Create S3 bucket (handle region-specific creation)
-if [ "${AWS_REGION}" = "us-east-1" ]; then
-    aws s3 mb s3://${BUCKET_NAME}
-else
-    aws s3 mb s3://${BUCKET_NAME} --region ${AWS_REGION}
-fi
+# Set bucket policy for deployment access
+cat > bucket-policy.json << EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::$(aws sts get-caller-identity --query Account --output text):root"
+            },
+            "Action": [
+                "s3:GetObject",
+                "s3:PutObject",
+                "s3:DeleteObject"
+            ],
+            "Resource": "arn:aws:s3:::$DEPLOYMENT_BUCKET/*"
+        }
+    ]
+}
+EOF
 
-# Enable versioning
-aws s3api put-bucket-versioning \
-    --bucket ${BUCKET_NAME} \
-    --versioning-configuration Status=Enabled
+aws s3api put-bucket-policy --bucket $DEPLOYMENT_BUCKET --policy file://bucket-policy.json
 
-echo "S3 bucket created: ${BUCKET_NAME}"
-echo ""
-echo "Update your deploy.sh script with:"
-echo "S3_BUCKET=\"${BUCKET_NAME}\""
+# Clean up
+rm bucket-policy.json
+
+echo "Deployment bucket setup complete: $DEPLOYMENT_BUCKET"
+echo "You can now run: ./deploy.sh dev $DEPLOYMENT_BUCKET"
