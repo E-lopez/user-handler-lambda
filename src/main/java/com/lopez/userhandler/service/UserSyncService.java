@@ -3,8 +3,6 @@ package com.lopez.userhandler.service;
 import java.util.List;
 import java.util.UUID;
 
-import org.jboss.logging.Logger;
-
 import com.lopez.userhandler.dto.ApiResponse;
 import com.lopez.userhandler.dto.UpdateUserRiskDto;
 import com.lopez.userhandler.dto.User;
@@ -26,6 +24,7 @@ import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 public class UserSyncService extends AbstractService {
 
   private final DynamoDbTable<User> userTable;
+  private static final String USER_NOT_FOUND = "User not found";
 
   @Inject
   public UserSyncService(DynamoDbEnhancedClient dynamoEnhancedClient) {
@@ -101,7 +100,7 @@ public class UserSyncService extends AbstractService {
       Key partitionKey = Key.builder().partitionValue(id).build();
       User user = userTable.getItem(partitionKey);
       if (user == null) {
-        return ApiResponse.notFound("User not found");
+        return ApiResponse.notFound(USER_NOT_FOUND);
       }
       return ApiResponse.ok(user);
     } catch (DynamoDbException e) {
@@ -132,7 +131,7 @@ public class UserSyncService extends AbstractService {
           .flatMap(page -> page.items().stream())
           .toList();
       if (results.isEmpty()) {
-        return ApiResponse.notFound("User not found");
+        return ApiResponse.notFound(USER_NOT_FOUND);
       }
       return ApiResponse.ok(results.get(0));
     } catch (DynamoDbException e) {
@@ -148,7 +147,7 @@ public class UserSyncService extends AbstractService {
     if (updateUserRiskDto == null) {
       return ApiResponse.badRequest("Update request cannot be null");
     }
-    if (!ValidationUtil.isValidString(updateUserRiskDto.getUserId(), 50) || 
+    if (!ValidationUtil.isValidString(updateUserRiskDto.getUserId(), 50) ||
         !ValidationUtil.isValidUUID(updateUserRiskDto.getUserId())) {
       return ApiResponse.badRequest("Invalid user ID format");
     }
@@ -160,33 +159,67 @@ public class UserSyncService extends AbstractService {
       Key partitionKey = Key.builder().partitionValue(updateUserRiskDto.getUserId()).build();
       User user = userTable.getItem(partitionKey);
       if (user == null) {
-        return ApiResponse.notFound("User not found");
+        return ApiResponse.notFound(USER_NOT_FOUND);
       }
-      
+
       user.setRiskLevel(updateUserRiskDto.getRiskLevel().trim());
       userTable.putItem(user);
       logger.infof("Risk level updated for user ID: %s", updateUserRiskDto.getUserId());
       return ApiResponse.ok(user, "Risk level updated successfully");
     } catch (DynamoDbException e) {
-      logger.errorf("DynamoDB error updating risk level for user %s: %s", 
+      logger.errorf("DynamoDB error updating risk level for user %s: %s",
           updateUserRiskDto.getUserId(), e.getMessage());
       return ApiResponse.internalServerError("Database error updating risk level");
     } catch (Exception e) {
-      logger.errorf("Unexpected error updating risk level for user %s: %s", 
+      logger.errorf("Unexpected error updating risk level for user %s: %s",
           updateUserRiskDto.getUserId(), e.getMessage());
       return ApiResponse.internalServerError("Failed to update risk level");
     }
   }
 
+  public ApiResponse<Boolean> checkIdNumberExists(String idNumber) {
+    if (!ValidationUtil.isValidIdNumber(idNumber)) {
+      return ApiResponse.badRequest("Invalid ID number format. Must be 5-12 digits");
+    }
+
+    try {
+      boolean exists = existsByIdNumber(userTable, idNumber.trim());
+      return ApiResponse.ok(exists);
+    } catch (DynamoDbException e) {
+      logger.errorf("DynamoDB error checking ID number %s: %s", idNumber, e.getMessage());
+      return ApiResponse.internalServerError("Database error checking ID number");
+    } catch (Exception e) {
+      logger.errorf("Unexpected error checking ID number %s: %s", idNumber, e.getMessage());
+      return ApiResponse.internalServerError("Failed to check ID number");
+    }
+  }
+
+  public ApiResponse<Boolean> checkEmailExists(String email) {
+    if (!ValidationUtil.isValidEmail(email)) {
+      return ApiResponse.badRequest("Invalid email format");
+    }
+
+    try {
+      boolean exists = existsByEmail(userTable, email.trim());
+      return ApiResponse.ok(exists);
+    } catch (DynamoDbException e) {
+      logger.errorf("DynamoDB error checking email %s: %s", email, e.getMessage());
+      return ApiResponse.internalServerError("Database error checking email");
+    } catch (Exception e) {
+      logger.errorf("Unexpected error checking email %s: %s", email, e.getMessage());
+      return ApiResponse.internalServerError("Failed to check email");
+    }
+  }
+
   private ApiResponse<String> validateUser(User user) {
-    if (!ValidationUtil.isValidString(user.getIdNumber(), 12) || 
+    if (!ValidationUtil.isValidString(user.getIdNumber(), 12) ||
         !ValidationUtil.isValidIdNumber(user.getIdNumber())) {
       return ApiResponse.badRequest("Invalid ID number format");
     }
     if (!ValidationUtil.isValidString(user.getUserName(), 100)) {
       return ApiResponse.badRequest("Invalid username");
     }
-    if (!ValidationUtil.isValidString(user.getEmail(), 255) || 
+    if (!ValidationUtil.isValidString(user.getEmail(), 255) ||
         !ValidationUtil.isValidEmail(user.getEmail())) {
       return ApiResponse.badRequest("Invalid email format");
     }

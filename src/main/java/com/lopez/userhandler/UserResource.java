@@ -92,4 +92,24 @@ public class UserResource {
         logger.infof("Updating user risk level");
         return userService.updateRiskLevel(updateUserRiskDto);
     }
+
+    @GET
+    @Path("/check-id/{idNumber}")
+    public ApiResponse<Boolean> checkIdNumberExists(@PathParam("idNumber") String idNumber) {
+        if (!ValidationUtil.isValidIdNumber(idNumber)) {
+            return ApiResponse.badRequest("Invalid ID number format. Must be 5-12 digits");
+        }
+        logger.infof("Checking if ID number exists");
+        return userService.checkIdNumberExists(idNumber);
+    }
+
+    @GET
+    @Path("/check-email/{email}")
+    public ApiResponse<Boolean> checkEmailExists(@PathParam("email") String email) {
+        if (!ValidationUtil.isValidEmail(email)) {
+            return ApiResponse.badRequest("Invalid email format");
+        }
+        logger.infof("Checking if email exists");
+        return userService.checkEmailExists(email);
+    }
 }
